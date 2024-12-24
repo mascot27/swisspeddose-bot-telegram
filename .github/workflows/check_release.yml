@@ -1,0 +1,46 @@
+name: Check SwissPedose Release
+on:
+  schedule:
+    - cron: "0 9 * * *"  # Runs every day at 9 AM UTC
+  workflow_dispatch:  # Allow manual runs
+jobs:
+  check_release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+      
+      - name: Set up Git credentials
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          pip install requests beautifulsoup4
+      
+      - name: Run script
+        run: python check_release.py
+      
+      # If the script updates last_release_date.txt, we commit and push changes back.
+      - name: Check if file changed
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git add last_release_date.txt
+            git commit -m "Update last release date [skip ci]"
+          else
+            echo "No changes to commit."
+          fi
+
+      - name: Push changes
+        if: always()
+        run: git push
+        env:
+          # Use GitHub token from the default secret, which has write permissions if workflow permissions are properly set
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
