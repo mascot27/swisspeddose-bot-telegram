@@ -1,25 +1,38 @@
 import os
 import requests
 from bs4 import BeautifulSoup
+import re
+from lxml import html
 from datetime import datetime
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-CHECK_URL = "https://www.swisspedose.example/releases"
+CHECK_URL = "https://db.swisspeddose.ch"
 LAST_DATE_FILE = "last_release_date.txt"
 
 def fetch_release_date(url):
     response = requests.get(url)
     response.raise_for_status()
-    soup = BeautifulSoup(response.text, "html.parser")
-    # Adjust the selector below to match the actual page
-    date_element = soup.find("span", class_="release-date")
-    if not date_element:
-        raise Exception("Release date element not found")
 
-    release_date_str = date_element.text.strip()
-    release_date = datetime.strptime(release_date_str, "%Y-%m-%d").date()
-    return release_date
+    # Parse with lxml for XPath support
+    tree = html.fromstring(response.content)
+    date_element_xpath = '//*[@id="app"]/footer/div/div[2]/div/p'
+
+    try:
+        # Extract the full text of the date element
+        date_element_text = tree.xpath(date_element_xpath)[0].text.strip()
+        
+        # Use regex to extract the date part (format: YYYY-MM-DD)
+        match = re.search(r"\d{4}-\d{2}-\d{2}", date_element_text)
+        if not match:
+            raise ValueError(f"No valid date found in text: {date_element_text}")
+        
+        release_date_str = match.group(0)  # Extract the matched date string
+        release_date = datetime.strptime(release_date_str, "%Y-%m-%d").date()
+        return release_date
+    except (IndexError, ValueError) as e:
+        print(f"Error fetching or parsing the release date: {e}")
+        return None
 
 def send_telegram_message(token, chat_id, text):
     if not token or not chat_id:
@@ -48,6 +61,9 @@ def save_last_date(file_path, date_obj):
 
 def main():
     current_release_date = fetch_release_date(CHECK_URL)
+    if current_release_date is None:
+        print("Failed to fetch the release date.")
+        return
     last_release_date = load_last_date(LAST_DATE_FILE)
     if last_release_date is None or current_release_date > last_release_date:
         message = f"New SwissPedose release published on {current_release_date}!"
