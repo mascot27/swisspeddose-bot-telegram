@@ -5,6 +5,7 @@ import re
 from lxml import html
 from datetime import datetime
 
+# Environment variables
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 CHECK_URL = "https://db.swisspeddose.ch"
@@ -14,20 +15,15 @@ def fetch_release_date(url):
     response = requests.get(url)
     response.raise_for_status()
 
-    # Parse with lxml for XPath support
     tree = html.fromstring(response.content)
     date_element_xpath = '//*[@id="app"]/footer/div/div[2]/div/p'
 
     try:
-        # Extract the full text of the date element
         date_element_text = tree.xpath(date_element_xpath)[0].text.strip()
-        
-        # Use regex to extract the date part (format: YYYY-MM-DD)
         match = re.search(r"\d{4}-\d{2}-\d{2}", date_element_text)
         if not match:
             raise ValueError(f"No valid date found in text: {date_element_text}")
-        
-        release_date_str = match.group(0)  # Extract the matched date string
+        release_date_str = match.group(0)
         release_date = datetime.strptime(release_date_str, "%Y-%m-%d").date()
         return release_date
     except (IndexError, ValueError) as e:
@@ -64,6 +60,7 @@ def main():
     if current_release_date is None:
         print("Failed to fetch the release date.")
         return
+
     last_release_date = load_last_date(LAST_DATE_FILE)
     if last_release_date is None or current_release_date > last_release_date:
         message = f"New SwissPedose release published on {current_release_date}!"
