@@ -54,6 +54,7 @@ def load_last_date(file_path):
 def save_last_date(file_path, date_obj):
     with open(file_path, "w") as f:
         f.write(date_obj.strftime("%Y-%m-%d"))
+    print(f"Last release date saved: {date_obj}")
 
 def main():
     current_release_date = fetch_release_date(CHECK_URL)
