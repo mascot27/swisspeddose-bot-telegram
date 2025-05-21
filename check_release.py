@@ -67,10 +67,11 @@ def main():
         message = f"New SwissPedose release published on {current_release_date}!"
         send_telegram_message(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, message)
         save_last_date(LAST_DATE_FILE, current_release_date)
+        print("New release detected and notification sent.")
     else:
         # Always send a message, even if no update
-        message = f"No new SwissPedose release. Latest release date is {current_release_date}."
-        send_telegram_message(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, message)
+        # message = f"No new SwissPedose release. Latest release date is {current_release_date}."
+        # send_telegram_message(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, message)
         print("No new release detected.")
 
 if __name__ == "__main__":
