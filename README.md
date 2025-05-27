@@ -75,9 +75,9 @@ New SwissPedose release published on 2025-05-21!
  ### Secrets
  - `TELEGRAM_BOT_TOKEN`: Your Telegram bot token
  - `TELEGRAM_CHAT_ID`: The chat ID for Telegram notifications
- - `EMAIL_FROM`: Sender email address (e.g. private@corentin-zeller.ch)
+ - `EMAIL_FROM`: Sender email address (e.g. your_email@domain.com)
  - `EMAIL_USER`: SMTP username (same as `EMAIL_FROM`)
- - `EMAIL_TO`: Recipient email address for notifications (e.g. junk@corentin-zeller.ch)
+ - `EMAIL_TO`: Recipient email address for notifications (e.g. jyour_email@domain.com)
  - `EMAIL_PASS`: Gmail App Password for SMTP authentication
 
  **Note:** `GITHUB_TOKEN` is provided automatically by Actions and does not need to be added.
