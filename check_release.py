@@ -4,6 +4,8 @@ from bs4 import BeautifulSoup
 import re
 from lxml import html
 from datetime import datetime
+import smtplib
+from email.message import EmailMessage
 
 # Environment variables
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -41,6 +43,29 @@ def send_telegram_message(token, chat_id, text):
         print(f"Failed to send message: {r.text}")
     else:
         print("Notification sent successfully.")
+        
+def send_email_notification(subject, body):
+    smtp_server = "smtp.gmail.com"
+    smtp_port = 465  # SSL port
+    from_addr = os.getenv("EMAIL_FROM")
+    to_addr = os.getenv("EMAIL_TO")
+    user = os.getenv("EMAIL_USER")
+    password = os.getenv("EMAIL_PASS")
+    if not all([from_addr, to_addr, user, password]):
+        print("SMTP credentials not set. Skipping email notification.")
+        return
+    msg = EmailMessage()
+    msg.set_content(body)
+    msg["Subject"] = subject
+    msg["From"] = from_addr
+    msg["To"] = to_addr
+    try:
+        with smtplib.SMTP_SSL(smtp_server, smtp_port) as smtp:
+            smtp.login(user, password)
+            smtp.send_message(msg)
+        print("Email notification sent successfully.")
+    except Exception as e:
+        print(f"Failed to send email: {e}")
 
 def load_last_date(file_path):
     if not os.path.exists(file_path):
@@ -65,7 +90,10 @@ def main():
     last_release_date = load_last_date(LAST_DATE_FILE)
     if last_release_date is None or current_release_date > last_release_date:
         message = f"New SwissPedose release published on {current_release_date}!"
+        # Send Telegram notification
         send_telegram_message(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, message)
+        # Send email notification
+        send_email_notification("New SwissPedose Release", message)
         save_last_date(LAST_DATE_FILE, current_release_date)
         print("New release detected and notification sent.")
     else:

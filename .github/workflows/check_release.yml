@@ -29,8 +29,14 @@ jobs:
 
       - name: Run script
         env:
+          # Telegram credentials
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          # SMTP credentials for Gmail
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}    # recipient address (pipeline secret)
+          EMAIL_PASS: ${{ secrets.EMAIL_PASS }} # app password for Gmail SMTP
         run: python check_release.py
 
       - name: Set up GitHub authentication
