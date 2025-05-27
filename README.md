@@ -31,10 +31,20 @@ This project checks the [SwissPedDose database](https://db.swisspeddose.ch) for 
 3. **Set environment variables:**
    - `TELEGRAM_BOT_TOKEN`: Your Telegram bot token
    - `TELEGRAM_CHAT_ID`: The chat ID to send notifications to
+   - `EMAIL_FROM`: Sender email address (e.g., example@domain.com)
+   - `EMAIL_USER`: SMTP username (same as `EMAIL_FROM`)
+   - `EMAIL_TO`: Recipient email address for notifications
+   - `EMAIL_PASS`: Gmail App Password for SMTP authentication
+   - `ALWAYS_NOTIFY`: Set to `true` to always send notifications, even if no new release (default: `false`)
    - Example (on macOS/Linux):
      ```bash
      export TELEGRAM_BOT_TOKEN=your_token_here
      export TELEGRAM_CHAT_ID=your_chat_id_here
+     export EMAIL_FROM=your_email@domain.com
+     export EMAIL_USER=your_email@domain.com
+     export EMAIL_TO=recipient@domain.com
+     export EMAIL_PASS=your_app_password
+     export ALWAYS_NOTIFY=false
      ```
 4. **Run the script:**
    ```bash
