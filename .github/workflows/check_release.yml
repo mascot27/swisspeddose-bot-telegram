@@ -2,7 +2,12 @@ name: Check SwissPedose Release
 on:
   schedule:
     - cron: "0 9 * * *"  # Runs every day at 9 AM UTC
-  workflow_dispatch:  # Allow manual runs
+  workflow_dispatch:  # Allow manual runs with optional input
+    inputs:
+      always_notify:
+        description: 'Send notifications on every run, even if no new release'
+        required: false
+        default: 'false'
 
 jobs:
   check_release:
@@ -37,6 +42,8 @@ jobs:
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}    # recipient address (pipeline secret)
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }} # app password for Gmail SMTP
+          # Control whether to notify even if no new release (true/false)
+          ALWAYS_NOTIFY: ${{ github.event.inputs.always_notify }}
         run: python check_release.py
 
       - name: Set up GitHub authentication

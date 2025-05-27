@@ -57,4 +57,35 @@ This project checks the [SwissPedDose database](https://db.swisspeddose.ch) for 
 ```
 New SwissPedose release published on 2025-05-21!
 ```
+ 
+ ## GitHub Actions Configuration
+
+ To automate this script in GitHub Actions, configure the following:
+
+ ### Secrets
+ - `TELEGRAM_BOT_TOKEN`: Your Telegram bot token
+ - `TELEGRAM_CHAT_ID`: The chat ID for Telegram notifications
+ - `EMAIL_FROM`: Sender email address (e.g. private@corentin-zeller.ch)
+ - `EMAIL_USER`: SMTP username (same as `EMAIL_FROM`)
+ - `EMAIL_TO`: Recipient email address for notifications (e.g. junk@corentin-zeller.ch)
+ - `EMAIL_PASS`: Gmail App Password for SMTP authentication
+
+ **Note:** `GITHUB_TOKEN` is provided automatically by Actions and does not need to be added.
+
+ ### Workflow Dispatch Input
+ - `always_notify` (optional): Set to `'true'` to send notifications even when no new release is detected. Default is `'false'`.
+
+ In your workflow file (`.github/workflows/check_release.yml`), the `run` step passes these as environment variables to the script.
+
+ ## Local Environment Variables
+ If running locally instead of via Actions, you can set:
+ ```bash
+ export TELEGRAM_BOT_TOKEN=...
+ export TELEGRAM_CHAT_ID=...
+ export EMAIL_FROM=...
+ export EMAIL_USER=...
+ export EMAIL_TO=...
+ export EMAIL_PASS=...
+ export ALWAYS_NOTIFY=false  # Optional
+ ```
 

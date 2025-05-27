@@ -82,6 +82,8 @@ def save_last_date(file_path, date_obj):
     print(f"Last release date saved: {date_obj}")
 
 def main():
+    # Determine if notifications should always be sent when no new release
+    always_notify = os.getenv("ALWAYS_NOTIFY", "false").lower() == "true"
     current_release_date = fetch_release_date(CHECK_URL)
     if current_release_date is None:
         print("Failed to fetch the release date.")
@@ -97,10 +99,14 @@ def main():
         save_last_date(LAST_DATE_FILE, current_release_date)
         print("New release detected and notification sent.")
     else:
-        # Always send a message, even if no update
-        # message = f"No new SwissPedose release. Latest release date is {current_release_date}."
-        # send_telegram_message(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, message)
-        print("No new release detected.")
+        if always_notify:
+            # Send a notification even when no new release
+            info = f"No new SwissPedose release. Latest release date is {current_release_date}."
+            send_telegram_message(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, info)
+            send_email_notification("SwissPedose Release Status", info)
+            print("Notification sent (no new release).")
+        else:
+            print("No new release detected.")
 
 if __name__ == "__main__":
     main()
