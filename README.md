@@ -13,10 +13,11 @@ This project checks the [SwissPedDose database](https://db.swisspeddose.ch) for 
 2. **Compare Dates:**
    - It compares the fetched release date with the last known release date stored in `last_release_date.txt`.
 3. **Send Notification:**
-   - If a new release is detected, a message is sent to a specified Telegram chat using a bot.
-   - The last known release date is updated.
+   - If a new release is detected, a message is sent to Telegram and by email.
 4. **No Update:**
    - If there is no new release, no notification is sent (unless you uncomment the relevant lines in the code).
+5. **Weekly Notification:**
+   - Every Monday a notification is sent even if no new release is detected.
 
 ## Setup
 
@@ -40,11 +41,11 @@ This project checks the [SwissPedDose database](https://db.swisspeddose.ch) for 
      ```bash
      export TELEGRAM_BOT_TOKEN=your_token_here
      export TELEGRAM_CHAT_ID=your_chat_id_here
-     export EMAIL_FROM=your_email@domain.com
-     export EMAIL_USER=your_email@domain.com
-     export EMAIL_TO=recipient@domain.com
-     export EMAIL_PASS=your_app_password
-     export ALWAYS_NOTIFY=false
+    export EMAIL_FROM=your_email@domain.com
+    export EMAIL_USER=your_email@domain.com
+    export EMAIL_TO=recipient@domain.com
+    export EMAIL_PASS=your_app_password
+    export ALWAYS_NOTIFY=false
      ```
 4. **Run the script:**
    ```bash
@@ -77,10 +78,9 @@ New SwissPedose release published on 2025-05-21!
  - `TELEGRAM_CHAT_ID`: The chat ID for Telegram notifications
  - `EMAIL_FROM`: Sender email address (e.g. your_email@domain.com)
  - `EMAIL_USER`: SMTP username (same as `EMAIL_FROM`)
- - `EMAIL_TO`: Recipient email address for notifications (e.g. jyour_email@domain.com)
- - `EMAIL_PASS`: Gmail App Password for SMTP authentication
+- `EMAIL_TO`: Recipient email address for notifications (e.g. jyour_email@domain.com)
+- `EMAIL_PASS`: Gmail App Password for SMTP authentication
 
- **Note:** `GITHUB_TOKEN` is provided automatically by Actions and does not need to be added.
 
  ### Workflow Dispatch Input
  - `always_notify` (optional): Set to `'true'` to send notifications even when no new release is detected. Default is `'false'`.
@@ -94,8 +94,7 @@ New SwissPedose release published on 2025-05-21!
  export TELEGRAM_CHAT_ID=...
  export EMAIL_FROM=...
  export EMAIL_USER=...
- export EMAIL_TO=...
- export EMAIL_PASS=...
- export ALWAYS_NOTIFY=false  # Optional
- ```
-
+export EMAIL_TO=...
+export EMAIL_PASS=...
+export ALWAYS_NOTIFY=false  # Optional
+```

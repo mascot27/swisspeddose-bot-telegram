@@ -1,6 +1,5 @@
 import os
 import requests
-from bs4 import BeautifulSoup
 import re
 from lxml import html
 from datetime import datetime
@@ -34,16 +33,21 @@ def fetch_release_date(url):
 
 def send_telegram_message(token, chat_id, text):
     if not token or not chat_id:
-        print("Telegram credentials not set. Skipping notification.")
-        return
+        print("Telegram credentials not set. Skipping Telegram notification.")
+        return False
     telegram_api_url = f"https://api.telegram.org/bot{token}/sendMessage"
     payload = {"chat_id": chat_id, "text": text}
-    r = requests.post(telegram_api_url, data=payload)
-    if r.status_code != 200:
-        print(f"Failed to send message: {r.text}")
-    else:
-        print("Notification sent successfully.")
-        
+    try:
+        r = requests.post(telegram_api_url, data=payload)
+        if r.status_code != 200:
+            print(f"Failed to send Telegram message: {r.text}")
+            return False
+        print("Telegram notification sent successfully.")
+        return True
+    except Exception as e:
+        print(f"Exception sending Telegram message: {e}")
+        return False
+
 def send_email_notification(subject, body):
     smtp_server = "smtp.gmail.com"
     smtp_port = 465  # SSL port
@@ -83,7 +87,9 @@ def save_last_date(file_path, date_obj):
 
 def main():
     # Determine if notifications should always be sent when no new release
-    always_notify = os.getenv("ALWAYS_NOTIFY", "false").lower() == "true"
+    always_notify_env = os.getenv("ALWAYS_NOTIFY", "false").lower() == "true"
+    today_is_monday = datetime.utcnow().weekday() == 0
+    always_notify = always_notify_env or today_is_monday
     current_release_date = fetch_release_date(CHECK_URL)
     if current_release_date is None:
         print("Failed to fetch the release date.")
@@ -92,9 +98,9 @@ def main():
     last_release_date = load_last_date(LAST_DATE_FILE)
     if last_release_date is None or current_release_date > last_release_date:
         message = f"New SwissPedose release published on {current_release_date}!"
-        # Send Telegram notification
-        send_telegram_message(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, message)
-        # Send email notification
+        tg_ok = send_telegram_message(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, message)
+        if not tg_ok:
+            message += " (Telegram notification failed)"
         send_email_notification("New SwissPedose Release", message)
         save_last_date(LAST_DATE_FILE, current_release_date)
         print("New release detected and notification sent.")
@@ -102,11 +108,20 @@ def main():
         if always_notify:
             # Send a notification even when no new release
             info = f"No new SwissPedose release. Latest release date is {current_release_date}."
-            send_telegram_message(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, info)
+            tg_ok = send_telegram_message(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, info)
+            if not tg_ok:
+                info += " (Telegram notification failed)"
             send_email_notification("SwissPedose Release Status", info)
             print("Notification sent (no new release).")
         else:
             print("No new release detected.")
-
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        error_text = f"Workflow failed: {e}"
+        tg_ok = send_telegram_message(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, error_text)
+        if not tg_ok:
+            error_text += " (Telegram notification failed)"
+        send_email_notification("SwissPedDose Bot Error", error_text)
+        raise
