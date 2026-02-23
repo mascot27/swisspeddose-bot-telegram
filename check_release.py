@@ -11,6 +11,7 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 CHECK_URL = "https://db.swisspeddose.ch"
 LAST_DATE_FILE = "last_release_date.txt"
+LATEST_CHECK_DATE_FILE = "latest_check_date.txt"
 
 def fetch_release_date(url):
     response = requests.get(url)
@@ -94,6 +95,11 @@ def main():
     if current_release_date is None:
         print("Failed to fetch the release date.")
         return
+
+    # Always write today's date so the repo has activity on every run,
+    # preventing GitHub from disabling the scheduled workflow due to inactivity.
+    today = datetime.utcnow().date()
+    save_last_date(LATEST_CHECK_DATE_FILE, today)
 
     last_release_date = load_last_date(LAST_DATE_FILE)
     if last_release_date is None or current_release_date > last_release_date:

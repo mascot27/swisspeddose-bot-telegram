@@ -58,7 +58,7 @@ jobs:
       - name: Check if file changed
         run: |
           if [ -n "$(git status --porcelain)" ]; then
-            git add last_release_date.txt
+            git add last_release_date.txt latest_check_date.txt
             git commit -m "Update last release date [skip ci]"
           else
             echo "No changes to commit."
