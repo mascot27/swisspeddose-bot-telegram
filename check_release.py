@@ -1,5 +1,7 @@
 import os
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 import re
 from lxml import html
 from datetime import datetime
@@ -13,9 +15,27 @@ CHECK_URL = "https://db.swisspeddose.ch"
 LAST_DATE_FILE = "last_release_date.txt"
 LATEST_CHECK_DATE_FILE = "latest_check_date.txt"
 
+def _make_session():
+    session = requests.Session()
+    retry_strategy = Retry(
+        total=3,
+        connect=3,
+        backoff_factor=2,
+        status_forcelist=[500, 502, 503, 504],
+    )
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    return session
+
 def fetch_release_date(url):
-    response = requests.get(url)
-    response.raise_for_status()
+    try:
+        session = _make_session()
+        response = session.get(url, timeout=30)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print(f"Network error fetching release date: {e}")
+        return None, str(e)
 
     tree = html.fromstring(response.content)
     date_element_xpath = '//*[@id="app"]/footer/div/div[2]/div/p'
@@ -27,10 +47,10 @@ def fetch_release_date(url):
             raise ValueError(f"No valid date found in text: {date_element_text}")
         release_date_str = match.group(0)
         release_date = datetime.strptime(release_date_str, "%Y-%m-%d").date()
-        return release_date
+        return release_date, None
     except (IndexError, ValueError) as e:
         print(f"Error fetching or parsing the release date: {e}")
-        return None
+        return None, str(e)
 
 def send_telegram_message(token, chat_id, text):
     if not token or not chat_id:
@@ -39,7 +59,7 @@ def send_telegram_message(token, chat_id, text):
     telegram_api_url = f"https://api.telegram.org/bot{token}/sendMessage"
     payload = {"chat_id": chat_id, "text": text}
     try:
-        r = requests.post(telegram_api_url, data=payload)
+        r = requests.post(telegram_api_url, data=payload, timeout=15)
         if r.status_code != 200:
             print(f"Failed to send Telegram message: {r.text}")
             return False
@@ -91,9 +111,12 @@ def main():
     always_notify_env = os.getenv("ALWAYS_NOTIFY", "false").lower() == "true"
     today_is_monday = datetime.utcnow().weekday() == 0
     always_notify = always_notify_env or today_is_monday
-    current_release_date = fetch_release_date(CHECK_URL)
+    current_release_date, fetch_error = fetch_release_date(CHECK_URL)
     if current_release_date is None:
-        print("Failed to fetch the release date.")
+        msg = f"Could not fetch release date from {CHECK_URL}: {fetch_error}"
+        print(msg)
+        send_telegram_message(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, msg)
+        send_email_notification("SwissPedDose Bot Warning", msg)
         return
 
     # Always write today's date so the repo has activity on every run,
