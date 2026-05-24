@@ -28,29 +28,98 @@ def _make_session():
     session.mount("http://", adapter)
     return session
 
+def _http_get(session, url):
+    response = session.get(url, timeout=30, headers={
+        "User-Agent": "Mozilla/5.0 (compatible; SwissPedDoseBot/1.0; +https://github.com/mascot27/swisspeddose-bot-telegram)"
+    })
+    response.raise_for_status()
+    return response
+
+
+def _parse_release_from_homepage(response):
+    """Strategy A: regex on the raw HTML for 'Release YYYY-MM-DD'.
+
+    The site renders the release date in the footer as plain text
+    'Release 2026-05-12'. This pattern is layout-independent, so it
+    survives DOM restructuring as long as the wording stays the same.
+    """
+    match = re.search(r"Release\s+(\d{4}-\d{2}-\d{2})", response.text)
+    if not match:
+        return None
+    return datetime.strptime(match.group(1), "%Y-%m-%d").date()
+
+
+def _parse_release_from_footer_xpath(response):
+    """Strategy B: XPath into the footer for a span containing the date.
+
+    Targets the current layout (data-flux-footer attribute) but is
+    flexible about exact nesting — picks any descendant span/p/div
+    whose text matches the release pattern.
+    """
+    tree = html.fromstring(response.content)
+    candidates = tree.xpath(
+        "//*[@data-flux-footer]//*[self::span or self::p or self::div]"
+        "[contains(normalize-space(text()), 'Release')]"
+    )
+    for el in candidates:
+        text = (el.text_content() or "").strip()
+        match = re.search(r"(\d{4}-\d{2}-\d{2})", text)
+        if match:
+            return datetime.strptime(match.group(1), "%Y-%m-%d").date()
+    return None
+
+
+def _parse_release_from_changelog(session, base_url):
+    """Strategy C: fall back to the changelog page.
+
+    Each entry on /de/changelog is prefixed with 'Veröffentlichung DD-MM-YYYY'.
+    We return the most recent one (the entries are listed newest-first).
+    """
+    changelog_url = base_url.rstrip("/") + "/de/changelog"
+    response = _http_get(session, changelog_url)
+    matches = re.findall(r"Ver[öo]ffentlichung\s+(\d{2})-(\d{2})-(\d{4})", response.text)
+    if not matches:
+        return None
+    dates = []
+    for day, month, year in matches:
+        try:
+            dates.append(datetime(int(year), int(month), int(day)).date())
+        except ValueError:
+            continue
+    if not dates:
+        return None
+    return max(dates)
+
+
 def fetch_release_date(url):
     try:
         session = _make_session()
-        response = session.get(url, timeout=30)
-        response.raise_for_status()
+        response = _http_get(session, url)
     except requests.exceptions.RequestException as e:
         print(f"Network error fetching release date: {e}")
         return None, str(e)
 
-    tree = html.fromstring(response.content)
-    date_element_xpath = '//*[@id="app"]/footer/div/div[2]/div/p'
+    strategies = (
+        ("homepage regex", lambda: _parse_release_from_homepage(response)),
+        ("homepage footer xpath", lambda: _parse_release_from_footer_xpath(response)),
+        ("changelog page", lambda: _parse_release_from_changelog(session, url)),
+    )
 
-    try:
-        date_element_text = tree.xpath(date_element_xpath)[0].text.strip()
-        match = re.search(r"\d{4}-\d{2}-\d{2}", date_element_text)
-        if not match:
-            raise ValueError(f"No valid date found in text: {date_element_text}")
-        release_date_str = match.group(0)
-        release_date = datetime.strptime(release_date_str, "%Y-%m-%d").date()
-        return release_date, None
-    except (IndexError, ValueError) as e:
-        print(f"Error fetching or parsing the release date: {e}")
-        return None, str(e)
+    errors = []
+    for name, strategy in strategies:
+        try:
+            result = strategy()
+        except Exception as e:
+            errors.append(f"{name}: {e}")
+            continue
+        if result is not None:
+            print(f"Release date {result} found via '{name}' strategy.")
+            return result, None
+        errors.append(f"{name}: no match")
+
+    error_msg = "All parsing strategies failed: " + "; ".join(errors)
+    print(f"Error fetching or parsing the release date: {error_msg}")
+    return None, error_msg
 
 def send_telegram_message(token, chat_id, text):
     if not token or not chat_id:
